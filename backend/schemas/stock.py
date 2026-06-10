@@ -21,7 +21,7 @@ class Fundamentals(BaseModel):
     profit_margin: float | None
     debt_to_equity: float | None
     dividend_yield: float | None
-    analyst_rating: Literal["Strong Buy", "Buy", "Hold", "Underperform", "Sell"] | None
+    analyst_rating: str | None
 
 
 class NewsItem(BaseModel):
