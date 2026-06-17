@@ -7,10 +7,10 @@ from pydantic import BaseModel
 class PriceSnapshot(BaseModel):
     current_price: float
     currency: str
-    day_change_pct: float
+    day_change_pct: float | None
     week_52_high: float
     week_52_low: float
-    avg_volume: int
+    avg_volume: int | None
 
 
 class Fundamentals(BaseModel):

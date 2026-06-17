@@ -17,8 +17,12 @@ def validate_ticker_info(info: dict, ticker: str) -> None:
 
 
 def fmt_percentage(x: float | None) -> float | None:
-    """Safely round number"""
-    return None if x is None else round(x, 2)
+    if x is None:
+        return None
+    value = safe_float(x)
+    if value is None:
+        return None
+    return round(value, 2)
 
 
 def safe_float(x: Any) -> float | None:
@@ -27,11 +31,17 @@ def safe_float(x: Any) -> float | None:
         if x is None:
             return None
         x = float(x)
-        if math.isnan(x):
+        if math.isnan(x) or math.isinf(x):
             return None
         return x
     except (TypeError, ValueError):
         return None
+
+
+def safe_int(x: Any) -> int | None:
+    """Safely parse int variable, otherwise return None"""
+    value = safe_float(x)
+    return int(value) if value is not None else None
 
 
 def humanize_number(value: int | float | None) -> str | None:
