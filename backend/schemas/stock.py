@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PriceSnapshot(BaseModel):
@@ -38,7 +38,9 @@ class RiskFactor(BaseModel):
     explanation: str
 
 
-class StockAnalysis(BaseModel):
+class StockAnalysisLLMOutput(BaseModel):
+    """Fields the LLM is responsible for producing"""
+
     # Identity
     ticker: str
     company_name: str
@@ -61,5 +63,10 @@ class StockAnalysis(BaseModel):
 
     # Meta
     disclaimer: str  # always include — not financial advice
-    generated_at: datetime
     data_sources: list[str]
+
+
+class StockAnalysis(StockAnalysisLLMOutput):
+    """The final object - adds generated_at programatically"""
+
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

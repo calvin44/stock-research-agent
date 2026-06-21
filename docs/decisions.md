@@ -78,3 +78,58 @@ than checking for a specific field like `longName`.
 **Known limitation:** This is a heuristic, not a guarantee. If yfinance 
 changes their "empty response" shape significantly, this threshold may 
 need revisiting.
+
+## 5. Excluding `generated_at` from LLM-generated output
+
+**Problem:** The original `StockAnalysis` schema included `generated_at: datetime` 
+as a field the LLM was expected to populate via `response_format`. In practice, 
+the LLM fabricated suspiciously round timestamps (e.g. `12:00:00`, sometimes 
+with dates years in the past) instead of producing the actual current time — 
+it has no reliable way to know the real wall-clock time at generation.
+
+**Fix:** Split the schema into two classes:
+- `StockAnalysisLLMOutput` — the schema actually passed to `response_format`, 
+  containing only fields the LLM can legitimately produce from tool data.
+- `StockAnalysis(StockAnalysisLLMOutput)` — adds `generated_at` with 
+  `Field(default_factory=lambda: datetime.now(UTC))`, set programmatically 
+  after the agent call completes, never exposed to the LLM.
+
+**Key learning:** `response_format` requires the LLM to populate every field 
+in the given schema — `Field(default_factory=...)` has no effect on LLM-facing 
+schemas, since the LLM doesn't know or respect Pydantic defaults. Defaults 
+only work when *Python code* instantiates the model without explicitly 
+passing that field. Any field that shouldn't be LLM-controlled must be 
+excluded from the schema entirely, not just given a default.
+
+---
+
+## 6. Fixing `data_sources` hallucination via explicit, mechanical prompting
+
+**Problem:** Despite `SYSTEM_PROMPT` already saying "never fabricate data," 
+the LLM consistently invented plausible-sounding financial news brand names 
+in `data_sources` (e.g. "CNBC", "Yahoo Finance", "Statista") that never 
+appeared in any actual tool result. This is a pattern-matching failure: the 
+LLM associates "financial analysis" with well-known publisher names rather 
+than grounding strictly in the URLs it was actually given.
+
+**Fix:** Added an explicit, mechanical instruction to `SYSTEM_PROMPT`:
+
+> For `data_sources` specifically: only include URLs that appeared literally 
+> in your tool call results. Do NOT include the names of well-known financial 
+> websites (e.g. "Yahoo Finance", "CNBC", "Bloomberg") unless their exact URL 
+> was returned by a tool call. If a tool result's content is from an 
+> unfamiliar or unclear source, use the URL as-is rather than guessing the 
+> publisher's name.
+
+**Result:** Verified by inspecting raw `ToolMessage` content alongside the 
+final `data_sources` output — after the fix, every entry was a real, 
+traceable URL matching an actual tool result, rather than a generic brand 
+name.
+
+**Key learning:** Vague instructions ("don't fabricate," "use real sources") 
+are insufficient against learned associations in the model. Concrete, 
+mechanical, falsifiable instructions (e.g. "copy URLs verbatim, don't 
+substitute a publisher name") are far more effective at interrupting 
+hallucination patterns — and the fix should be verified empirically by 
+tracing output back to actual tool call results, not just by re-reading the 
+prompt and assuming it will work.
