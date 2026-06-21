@@ -4,12 +4,13 @@ from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
 
 from backend.agent.prompts import COMPETITIVE_QUERY, EARNINGS_QUERY, STOCK_NEWS_QUERY
+from backend.agent.tools.types import SearchResult
 
 # load_dotenv()
 # Note: load_dotenv() should be called in main.py entry point
 
 
-def search_tavily(query: str, max_results: int = 3) -> list[dict]:
+def search_tavily(query: str, max_results: int = 3) -> list[SearchResult]:
     """Search web using Tavily API"""
     search = TavilySearch(max_results=max_results)
     results = search.invoke(query)
@@ -28,7 +29,7 @@ def search_tavily(query: str, max_results: int = 3) -> list[dict]:
 
 
 @tool
-def search_stock_news(company_name: str, ticker: str) -> list[dict]:
+def search_stock_news(company_name: str, ticker: str) -> list[SearchResult]:
     """Search stock news using Tavily API"""
     try:
         query = STOCK_NEWS_QUERY.format(
@@ -42,7 +43,7 @@ def search_stock_news(company_name: str, ticker: str) -> list[dict]:
 
 
 @tool
-def search_competitive_landscape(company_name: str, industry: str) -> list[dict]:
+def search_competitive_landscape(company_name: str, industry: str) -> list[SearchResult]:
     """Search competitive landscape using Tavily API"""
     try:
         query = COMPETITIVE_QUERY.format(
@@ -58,7 +59,7 @@ def search_competitive_landscape(company_name: str, industry: str) -> list[dict]
 
 
 @tool
-def search_earnings_guidance(ticker: str, company_name: str) -> list[dict]:
+def search_earnings_guidance(ticker: str, company_name: str) -> list[SearchResult]:
     """Search for recent earnings and forward guidance for a stock"""
     try:
         query = EARNINGS_QUERY.format(

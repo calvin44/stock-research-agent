@@ -1,7 +1,36 @@
 from pytest import mark, raises
 
-from backend.agent.tools.types import FundamentalsResult, PriceDataResult, StockIdentityResult
+from backend.agent.tools.tavily import (
+    search_competitive_landscape,
+    search_earnings_guidance,
+    search_stock_news,
+)
+from backend.agent.tools.types import (
+    FundamentalsResult,
+    PriceDataResult,
+    SearchResult,
+    StockIdentityResult,
+)
 from backend.agent.tools.yfinance import get_fundamentals, get_price_data, get_stock_info
+
+
+def assert_valid_search_result(result: list[SearchResult]) -> None:
+    # Structure assertion
+    assert isinstance(result, list)
+    assert len(result) > 0
+    assert len(result) <= 3
+
+    # Assert list content
+    for item in result:
+        assert isinstance(item, dict)
+        expected_keys = set(SearchResult.__annotations__.keys())
+        assert set(item.keys()) == expected_keys
+        assert isinstance(item["title"], str)
+        assert isinstance(item["content"], str)
+        assert isinstance(item["url"], str)
+
+
+# --- yfinance tools ---
 
 
 class TestGetStockInfo:
@@ -15,8 +44,7 @@ class TestGetStockInfo:
 
         # Structure assertions
         assert isinstance(result, dict)
-        expected_keys = set(StockIdentityResult.__annotations__.keys())
-        assert set(result.keys()) == expected_keys
+        assert set(result.keys()) == set(StockIdentityResult.__annotations__.keys())
 
         # Non-null assertion for required fields
         assert result["company_name"] is not None
@@ -27,7 +55,7 @@ class TestGetStockInfo:
         industry = result["industry"]
 
         assert isinstance(sector, str) or sector is None
-        assert isinstance(industry, str) or sector is None
+        assert isinstance(industry, str) or industry is None
 
     @mark.integration
     def test_invalid_ticker(self):
@@ -44,8 +72,7 @@ class TestGetPriceData:
 
         # Structure assertions
         assert isinstance(result, dict)
-        expected_keys = set(PriceDataResult.__annotations__.keys())
-        assert set(result.keys()) == expected_keys
+        assert set(result.keys()) == set(PriceDataResult.__annotations__.keys())
 
         # Value type assertion
         assert isinstance(result["current_price"], float)
@@ -75,8 +102,7 @@ class TestGetFundamentals:
 
         # Structure assertion
         assert isinstance(result, dict)
-        expected_keys = set(FundamentalsResult.__annotations__.keys())
-        assert set(result.keys()) == expected_keys
+        assert set(result.keys()) == set(FundamentalsResult.__annotations__.keys())
 
         # Value type assertion
         assert isinstance(result["market_cap"], str)
@@ -103,3 +129,42 @@ class TestGetFundamentals:
         with raises(ValueError) as exp_info:
             get_fundamentals.invoke(ticker)
         assert ticker in str(exp_info.value)
+
+
+# --- tavily tools ---
+
+
+class TestSearchStockNews:
+    company_name = "Apple Inc"
+    ticker = "AAPL"
+
+    @mark.integration
+    def test_valid_search(self):
+        result = search_stock_news.invoke(
+            {"company_name": self.company_name, "ticker": self.ticker}
+        )
+        assert_valid_search_result(result)
+
+
+class TestSearchCompetitiveLandscape:
+    company_name = "Apple Inc"
+    industry = "Consumer Electronics"
+
+    @mark.integration
+    def test_valid_search(self):
+        result = search_competitive_landscape.invoke(
+            {"company_name": self.company_name, "industry": self.industry}
+        )
+        assert_valid_search_result(result)
+
+
+class TestSearchEarningsGuidance:
+    company_name = "Apple Inc"
+    ticker = "AAPL"
+
+    @mark.integration
+    def test_valid_search(self):
+        result = search_earnings_guidance.invoke(
+            {"company_name": self.company_name, "ticker": self.ticker}
+        )
+        assert_valid_search_result(result)

@@ -27,3 +27,9 @@ class FundamentalsResult(TypedDict):
     debt_to_equity: float | None
     dividend_yield: float | None
     analyst_rating: str | None
+
+
+class SearchResult(TypedDict):
+    title: str
+    content: str
+    url: str
