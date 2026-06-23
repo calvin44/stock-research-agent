@@ -35,3 +35,6 @@ pythonpath = ["."]
 markers = [
     "integration: marks tests requiring real API calls",
 ]
+[tool.ruff.lint.per-file-ignores]
+"backend/agent/prompts.py" = ["E501"]
+"backend/main.py" = ["E402"]

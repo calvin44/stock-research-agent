@@ -1,6 +1,9 @@
-def main():
-    print("Hello from stock-research-agent!")
+from dotenv import load_dotenv
 
+load_dotenv()
+from fastapi import FastAPI
 
-if __name__ == "__main__":
-    main()
+from backend.api.routes import router
+
+app = FastAPI(title="Stock Research Agent")
+app.include_router(router)
