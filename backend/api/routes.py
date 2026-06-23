@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from backend.agent.graph import run_research
+from backend.agent.agent import run_research
 from backend.schemas.stock import StockAnalysis
 
 router = APIRouter()
