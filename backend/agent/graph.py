@@ -19,16 +19,27 @@ agent = create_agent(
 
 
 def run_research(ticker: str) -> StockAnalysis:
-    """Run the stock research agent and return a complete StockAnalysis"""
-    result = agent.invoke(
-        {
-            "messages": [
-                HumanMessage(content=f"Help me do a comprehensive research on the ticker {ticker}")
-            ]
-        }
+    """Run the stock research agent and return a complete StockAnalysis."""
+    max_retries = 2
+    last_error = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            result = agent.invoke(
+                {
+                    "messages": [
+                        HumanMessage(
+                            content=f"Help me do a comprehensive research on the ticker {ticker}"
+                        )
+                    ]
+                }
+            )
+            llm_output = result["structured_response"]
+            return StockAnalysis(**llm_output.model_dump())
+        except Exception as e:
+            last_error = e
+            continue
+
+    raise ValueError(
+        f"Failed to generate research for {ticker} after {max_retries + 1} attempts: {last_error}"
     )
-
-    llm_output = result["structured_response"]
-
-    final_analysis = StockAnalysis(**llm_output.model_dump())
-    return final_analysis

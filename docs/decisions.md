@@ -133,3 +133,43 @@ substitute a publisher name") are far more effective at interrupting
 hallucination patterns — and the fix should be verified empirically by 
 tracing output back to actual tool call results, not just by re-reading the 
 prompt and assuming it will work.
+
+## 7. Fixing field omission via comprehensive, explicit instructions
+
+**Problem:** Beyond hallucination (fabricating data_sources), the LLM also 
+exhibited the opposite failure mode — silently omitting required schema 
+fields (`recent_news[].sentiment`, then `business_summary`) when 
+`SYSTEM_PROMPT` never explicitly instructed it to produce them. Since 
+`response_format` enforces strict Pydantic validation with no built-in 
+retry, any omitted required field caused a hard crash 
+(`StructuredOutputValidationError`), not a graceful degradation.
+
+**Investigation:** Initially added retry logic to `run_research()`, 
+assuming the failures were non-deterministic LLM flakiness. This proved 
+ineffective — retrying the same request reproduced the *same* missing 
+field every time, revealing the issue was a consistent prompt gap, not 
+randomness. An audit of every field in `StockAnalysisLLMOutput` against 
+the actual `SYSTEM_PROMPT` text showed three fields with no corresponding 
+instruction at all: `business_summary`, `key_catalysts`, `competitive_position`.
+
+**Fix:** Added explicit instructions to `SYSTEM_PROMPT` covering every 
+previously-unmentioned field:
+- Required `sentiment` classification per news item, with the basis for 
+  classification specified (tone of headline/content).
+- Required `business_summary`, `competitive_position`, and `key_catalysts`, 
+  explicitly stating every schema field is required.
+
+**Verification:** Ran `run_research("AAPL")` 5 times consecutively post-fix; 
+all 5 succeeded with complete output (previously, roughly 1-in-3 to 1-in-2 
+runs failed).
+
+**Key learning:** When using strict `response_format` with no automatic 
+repair, *every* field in the schema needs an explicit, corresponding 
+instruction in the prompt — fields are not "self-explanatory" to the model 
+just because their name or a Python comment describes their purpose. 
+Python-level comments and docstrings on Pydantic models are invisible to 
+the LLM; only the field name, type, and constraints (e.g. `Literal` options) 
+are passed through `response_format`. A practical audit technique: list 
+every schema field side-by-side with the prompt text and confirm each one 
+has explicit coverage, rather than waiting for omissions to surface 
+through trial and error.
