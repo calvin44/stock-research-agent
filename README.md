@@ -1,5 +1,7 @@
 # Stock Research Agent
 
+[![Tests](https://github.com/calvin44/stock-research-agent/actions/workflows/test.yml/badge.svg)](https://github.com/calvin44/stock-research-agent/actions/workflows/test.yml)
+
 An AI-powered stock research API built with FastAPI and LangGraph. Given a ticker symbol, it autonomously fetches real-time price data, fundamentals, news, and competitive analysis, then synthesizes a structured research report — without ever giving buy/sell recommendations.
 
 ## Demo
