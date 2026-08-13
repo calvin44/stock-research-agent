@@ -11,3 +11,10 @@ wheels/
 .env
 .vscode/settings.json
 .vscode/launch.json
+qdrant_data/
+postgres_data/
+**/.DS_Store
+.DS_Store
+**/.DS_Store
+.DS_Store
+**/.DS_Store

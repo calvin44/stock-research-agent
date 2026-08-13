@@ -23,7 +23,7 @@ def run_research(ticker: str) -> StockAnalysis:
     max_retries = 2
     last_error = None
 
-    for attempt in range(max_retries + 1):
+    for _ in range(max_retries + 1):
         try:
             result = agent.invoke(
                 {
