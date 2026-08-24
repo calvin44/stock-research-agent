@@ -21,6 +21,9 @@ from pypdf import PdfReader
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import (
     Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
     SparseIndexParams,
     SparseVectorParams,
     VectorParams,
@@ -99,7 +102,20 @@ async def index_document(
     # check if identical file already indexed
     existing = get_record_by_hash(content_hash)
     if existing:
-        return existing.doc_id  # duplicate — skip everything
+        # verify chunks actually exist in Qdrant
+        # if collection was deleted or chunks are missing - re-index
+        vs = get_vectorstore()
+        results = vs.similarity_search(
+            "test",
+            k=1,
+            filter=Filter(
+                must=[
+                    FieldCondition(key="metadata.doc_id", match=MatchValue(value=existing.doc_id))
+                ]
+            ),
+        )
+        if results:
+            return existing.doc_id  # chunks exist - true duplicate, skip
 
     # only reaches here if file is new
     record = create_record(
