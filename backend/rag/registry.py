@@ -9,8 +9,10 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 import psycopg
+from psycopg.rows import namedtuple_row
 
 
 class IndexStatus(StrEnum):
@@ -29,6 +31,7 @@ class DocumentRecord:
     fiscal_year: str
     status: IndexStatus = IndexStatus.PENDING
     total_chunks: int = 0
+    content_hash: str = ""
     error: str = ""
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
@@ -46,10 +49,11 @@ def _get_database_url() -> str:
 
 def get_connection() -> psycopg.Connection:
     """
-    Open a new Postgres connection.
+    Open a new Postgres connection with namedtuple row factory.
+    Rows are accessible by column name (row.doc_id) not index (row[0]).
     Use as a context manager: `with get_connection() as conn`.
     """
-    return psycopg.connect(_get_database_url())
+    return psycopg.connect(_get_database_url(), row_factory=namedtuple_row)
 
 
 def setup_table() -> None:
@@ -67,6 +71,7 @@ def setup_table() -> None:
                 fiscal_year  TEXT NOT NULL,
                 status       TEXT NOT NULL DEFAULT 'pending',
                 total_chunks INTEGER NOT NULL DEFAULT 0,
+                content_hash TEXT NOT NULL DEFAULT '',
                 error        TEXT NOT NULL DEFAULT '',
                 created_at   TEXT NOT NULL,
                 updated_at   TEXT NOT NULL
@@ -75,11 +80,29 @@ def setup_table() -> None:
         conn.commit()
 
 
+def _row_to_record(row: Any) -> DocumentRecord:
+    """Convert a database row to a DocumentRecord."""
+    return DocumentRecord(
+        doc_id=row.doc_id,
+        filename=row.filename,
+        company=row.company,
+        report_type=row.report_type,
+        fiscal_year=row.fiscal_year,
+        status=IndexStatus(row.status),
+        total_chunks=row.total_chunks,
+        content_hash=row.content_hash,
+        error=row.error,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
 def create_record(
     filename: str,
     company: str,
     report_type: str,
     fiscal_year: str,
+    content_hash: str = "",
 ) -> DocumentRecord:
     """Create a new document record with PENDING status."""
     doc_id = str(uuid.uuid4())
@@ -91,6 +114,7 @@ def create_record(
         company=company,
         report_type=report_type,
         fiscal_year=fiscal_year,
+        content_hash=content_hash,
         created_at=now,
         updated_at=now,
     )
@@ -100,8 +124,8 @@ def create_record(
             """
             INSERT INTO documents
             (doc_id, filename, company, report_type, fiscal_year,
-             status, total_chunks, error, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             status, total_chunks, content_hash, error, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 record.doc_id,
@@ -111,6 +135,7 @@ def create_record(
                 record.fiscal_year,
                 record.status.value,
                 record.total_chunks,
+                record.content_hash,
                 record.error,
                 record.created_at,
                 record.updated_at,
@@ -149,52 +174,34 @@ def get_indexed_doc_ids() -> list[str]:
     """Return doc_ids for fully indexed documents — used as retrieval safety gate."""
     with get_connection() as conn:
         rows = conn.execute("SELECT doc_id FROM documents WHERE status = 'indexed'").fetchall()
-    return [row[0] for row in rows]
+    return [row.doc_id for row in rows]  # type: ignore
 
 
 def get_record(doc_id: str) -> DocumentRecord | None:
     """Fetch one document record by doc_id. Returns None if not found."""
     with get_connection() as conn:
         row = conn.execute("SELECT * FROM documents WHERE doc_id = %s", (doc_id,)).fetchone()
+    return _row_to_record(row) if row else None
 
-    if row is None:
-        return None
 
-    # row order: doc_id, filename, company, report_type, fiscal_year,
-    #            status, total_chunks, error, created_at, updated_at
-    return DocumentRecord(
-        doc_id=row[0],
-        filename=row[1],
-        company=row[2],
-        report_type=row[3],
-        fiscal_year=row[4],
-        status=IndexStatus(row[5]),
-        total_chunks=row[6],
-        error=row[7],
-        created_at=row[8],
-        updated_at=row[9],
-    )
+def get_record_by_hash(content_hash: str) -> DocumentRecord | None:
+    """
+    Check if a document with this content hash is already indexed.
+    Used for deduplication — prevents re-indexing identical files.
+    """
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT * FROM documents
+            WHERE content_hash = %s AND status = 'indexed'
+            """,
+            (content_hash,),
+        ).fetchone()
+    return _row_to_record(row) if row else None
 
 
 def get_all_records() -> list[DocumentRecord]:
     """Return all document records ordered by creation date, newest first."""
     with get_connection() as conn:
         rows = conn.execute("SELECT * FROM documents ORDER BY created_at DESC").fetchall()
-
-    # row order: doc_id, filename, company, report_type, fiscal_year,
-    #            status, total_chunks, error, created_at, updated_at
-    return [
-        DocumentRecord(
-            doc_id=row[0],
-            filename=row[1],
-            company=row[2],
-            report_type=row[3],
-            fiscal_year=row[4],
-            status=IndexStatus(row[5]),
-            total_chunks=row[6],
-            error=row[7],
-            created_at=row[8],
-            updated_at=row[9],
-        )
-        for row in rows
-    ]
+    return [_row_to_record(row) for row in rows]
