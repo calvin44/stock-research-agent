@@ -6,6 +6,11 @@ from backend.schemas.stock import StockAnalysis
 router = APIRouter()
 
 
+@router.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @router.get("/research/{ticker}", response_model=StockAnalysis)
 def get_research(ticker: str):
     try:

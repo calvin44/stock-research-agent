@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+      - venv_cache:/app/.venv
     depends_on:
       - qdrant
       - postgres
@@ -34,3 +35,4 @@ services:
 volumes:
   qdrant_data:
   postgres_data:
+  venv_cache:
