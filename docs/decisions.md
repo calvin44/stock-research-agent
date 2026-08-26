@@ -79,6 +79,8 @@ than checking for a specific field like `longName`.
 changes their "empty response" shape significantly, this threshold may 
 need revisiting.
 
+---
+
 ## 5. Excluding `generated_at` from LLM-generated output
 
 **Problem:** The original `StockAnalysis` schema included `generated_at: datetime` 
@@ -134,6 +136,8 @@ hallucination patterns — and the fix should be verified empirically by
 tracing output back to actual tool call results, not just by re-reading the 
 prompt and assuming it will work.
 
+---
+
 ## 7. Fixing field omission via comprehensive, explicit instructions
 
 **Problem:** Beyond hallucination (fabricating data_sources), the LLM also 
@@ -173,3 +177,128 @@ are passed through `response_format`. A practical audit technique: list
 every schema field side-by-side with the prompt text and confirm each one 
 has explicit coverage, rather than waiting for omissions to surface 
 through trial and error.
+
+---
+
+## 8. Postgres for document registry and session memory
+
+**Decision:** Use a single Postgres instance for both the document registry
+(`documents` table, our schema) and LangGraph session memory (`checkpoints`
+tables, LangGraph's schema).
+
+**Why:**
+- Document registry needs structured, queryable storage — SQL is the
+  right tool (status filtering, hash lookups, ordered listing by date).
+- LangGraph's `PostgresSaver` requires Postgres for persistent session
+  memory across server restarts.
+- One service instead of two — simpler operations, one connection string,
+  one backup concern.
+- Both concerns are administrative and relational, not vector — Qdrant
+  handles vectors, Postgres handles everything else.
+
+**Trade-off accepted:** Postgres runs as a Docker container, not a managed
+cloud service. Data lives on the host machine's Docker volume. Acceptable
+for local development and single-server deployment. A managed Postgres
+addon (e.g. Railway's Postgres service) would be the production upgrade
+path if data persistence guarantees become a hard requirement.
+
+---
+
+## 9. Single Qdrant collection with metadata filtering
+
+**Decision:** All financial reports from all companies are stored in one
+`financial_reports` collection. Company and fiscal year scoping happens
+via metadata filters at query time (`metadata.company`, `metadata.fiscal_year`),
+not via separate collections per company.
+
+**Why:**
+- Cross-company queries work naturally — "compare UNTR and AAPL margins"
+  retrieves from both without joining collections.
+- Simpler operations — one collection to create, monitor, and maintain.
+- Qdrant metadata filtering is a first-class, performant feature designed
+  for exactly this pattern.
+- LangChain stores Document metadata nested under a `metadata` key in
+  Qdrant's payload — filter keys must use `metadata.doc_id`, `metadata.company`
+  etc. (confirmed via Qdrant dashboard inspection).
+
+**Trade-off accepted:** Strict per-user data isolation would require separate
+collections per user. Acceptable for current global shared library design
+with no user authentication. Revisit when multi-user auth is introduced.
+
+---
+
+## 10. Content hash deduplication before indexing
+
+**Decision:** SHA-256 hash of raw PDF bytes is computed before any registry
+or Qdrant operations. If a matching hash exists with `status=indexed` and
+chunks are confirmed present in Qdrant, the existing `doc_id` is returned
+without re-indexing.
+
+**Why:**
+- Prevents duplicate chunks in Qdrant from accidental re-uploads.
+- Duplicate chunks waste top-k retrieval slots — if k=5 and 3 slots are
+  duplicates, effective unique retrieval drops to 2 chunks.
+- Hash computed from raw bytes before any transformation — the only point
+  where the complete, unmodified file is available in memory.
+- SHA-256 chosen: no known practical collisions, modern standard, negligible
+  performance difference vs MD5 for file-sized inputs.
+- Qdrant chunk existence verified before returning early — handles the case
+  where the collection was deleted while the registry record still says indexed.
+
+**Trade-off accepted:** Deduplication adds one Postgres query and one Qdrant
+query per upload. Negligible overhead compared to the indexing pipeline itself.
+
+---
+
+## 11. RecursiveCharacterTextSplitter over alternatives
+
+**Decision:** Use `RecursiveCharacterTextSplitter` at `chunk_size=800` tokens,
+`chunk_overlap=100` tokens (tiktoken `cl100k_base` encoding).
+
+**Why:**
+- Recursive splitter tries separators in order (`\n\n` → `\n` → ` ` → `""`)
+  — always cuts at the most natural available boundary rather than a fixed
+  character position.
+- 800 tokens preserves paragraph-level reasoning for financial text where
+  figures and their explanations often span 3-4 sentences together.
+- 100 token overlap catches context split across chunk boundaries — a key
+  sentence split at a boundary still appears fully in one adjacent chunk.
+- Token-based (not character-based) via tiktoken — accurate for embedding
+  model limits and billing.
+- `SemanticChunker` and proposition chunking rejected as premature —
+  RAGAS evaluation data should justify the extra cost before adopting
+  more sophisticated strategies. Imperfect chunking is compensated downstream
+  by hybrid search, reranking, and query transformation.
+
+**Trade-off accepted:** Fixed parameters do not adapt per document type.
+For unknown user-uploaded documents this is a known limitation. The field
+is compensated downstream rather than solved at the chunking layer.
+
+---
+
+## 12. Sequential upload design (not concurrent)
+
+**Decision:** Document uploads are processed sequentially. CPU-bound
+operations (PDF extraction, chunking, hashing) are not wrapped in
+`asyncio.to_thread()`.
+
+**Why:**
+- Single user, local machine — no concurrent upload scenario exists in
+  the current scope.
+- Sequential processing gives users a clear mental model: "your file is
+  processing, please wait."
+- Controlled OpenAI API costs — no concurrent embedding spikes from
+  simultaneous uploads.
+- Simpler code — `asyncio.to_thread()` wrapping adds complexity without
+  observable benefit at current scale.
+
+**Trade-off accepted:** CPU-bound operations (PyPDF extraction, text
+splitting, SHA-256 hashing) block the event loop during indexing. For a
+multi-tenant system with concurrent users, these operations would need
+`asyncio.to_thread()` wrapping. Revisit before multi-user deployment.
+
+**Known improvement:** Replace `vectorstore.add_documents()` with
+`await vectorstore.aadd_documents()` for the embedding + Qdrant write
+step — this is genuinely async and yields the event loop during the
+OpenAI API calls. Not done because the sequential upload design makes it
+imperceptible, but worth fixing before scaling.s
