@@ -6,9 +6,6 @@ from langchain_tavily import TavilySearch
 from backend.agent.prompts import COMPETITIVE_QUERY, EARNINGS_QUERY, STOCK_NEWS_QUERY
 from backend.agent.tools.types import SearchResult
 
-# load_dotenv()
-# Note: load_dotenv() should be called in main.py entry point
-
 
 def search_tavily(query: str, max_results: int = 3) -> list[SearchResult]:
     """Search web using Tavily API"""

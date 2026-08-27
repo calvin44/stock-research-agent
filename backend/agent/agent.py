@@ -8,14 +8,23 @@ from backend.schemas.stock import StockAnalysis, StockAnalysisLLMOutput
 
 MODEL_NAME = "gpt-4o-mini"
 
-model = init_chat_model(model=MODEL_NAME, temperature=0.3)
+# module-level singletons — initialized on first use, not at import time
+_model = None
+_agent = None
 
-agent = create_agent(
-    model=model,
-    tools=ALL_TOOLS,
-    system_prompt=SYSTEM_PROMPT,
-    response_format=StockAnalysisLLMOutput,
-)
+
+def _get_agent():
+    """Lazy-initialize the agent — reads OPENAI_API_KEY at call time, not import time."""
+    global _model, _agent
+    if _agent is None:
+        _model = init_chat_model(model=MODEL_NAME, temperature=0.3)
+        _agent = create_agent(
+            model=_model,
+            tools=ALL_TOOLS,
+            system_prompt=SYSTEM_PROMPT,
+            response_format=StockAnalysisLLMOutput,
+        )
+    return _agent
 
 
 def run_research(ticker: str) -> StockAnalysis:
@@ -25,7 +34,7 @@ def run_research(ticker: str) -> StockAnalysis:
 
     for _ in range(max_retries + 1):
         try:
-            result = agent.invoke(
+            result = _get_agent().invoke(
                 {
                     "messages": [
                         HumanMessage(

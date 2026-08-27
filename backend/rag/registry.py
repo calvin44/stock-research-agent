@@ -4,7 +4,6 @@ Tracks every document from upload through indexing to queryable state.
 Postgres-backed: survives restarts, queryable via SQL.
 """
 
-import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -13,6 +12,8 @@ from typing import Any
 
 import psycopg
 from psycopg.rows import namedtuple_row
+
+from backend.config import settings
 
 
 class IndexStatus(StrEnum):
@@ -39,7 +40,7 @@ class DocumentRecord:
 
 def _get_database_url() -> str:
     """Read DATABASE_URL from environment. Raises clearly if not set."""
-    url = os.getenv("DATABASE_URL")
+    url = settings.database_url
     if not url:
         raise RuntimeError(
             "DATABASE_URL environment variable is not set. Add it to your .env file."

@@ -29,6 +29,7 @@ from qdrant_client.http.models import (
     VectorParams,
 )
 
+from backend.config import settings
 from backend.rag.registry import IndexStatus, create_record, get_record_by_hash, update_status
 
 COLLECTION_NAME = "financial_reports"
@@ -42,7 +43,7 @@ _vectorstore: QdrantVectorStore | None = None
 
 def _get_qdrant_url() -> str:
     """Read QDRANT_URL from environment. Raises clearly if not set."""
-    url = os.getenv("QDRANT_URL")
+    url = settings.qdrant_url
     if not url:
         raise RuntimeError("QDRANT_URL environment variable is not set. Add it to your .env file.")
     return url

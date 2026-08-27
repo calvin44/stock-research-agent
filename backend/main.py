@@ -1,14 +1,13 @@
+from backend.config import settings  # noqa: F401, I001
 from contextlib import asynccontextmanager
 
-from dotenv import load_dotenv
 from fastapi import FastAPI
 
+from backend.api.report_routes import router as reports_router
 from backend.api.routes import router
 from backend.rag.indexer import get_vectorstore
 from backend.rag.registry import setup_table
 from backend.rag.retrieval import get_reranker
-
-load_dotenv()  # must run before setup_table reads DATABASE_URL
 
 
 @asynccontextmanager
@@ -25,6 +24,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Stock Research Agent")
+app = FastAPI(title="Stock Research Agent", lifespan=lifespan)
 
 app.include_router(router)
+app.include_router(reports_router)
