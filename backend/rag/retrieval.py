@@ -3,13 +3,12 @@ Retrieval pipeline: query → hybrid search → rerank → formatted citations.
 
 Flow:
   1. Registry safety gate — only query fully indexed doc_ids
-  2. Qdrant hybrid search (dense + BM25) with optional company filter
+  2. Qdrant hybrid search (dense + BM25) with company filter
   3. FastEmbed cross-encoder reranking — top-k from candidates
   4. Format chunks with citations for LLM context
 """
 
 from fastembed.rerank.cross_encoder import TextCrossEncoder
-from langchain_core.documents import Document
 from langsmith import traceable
 from qdrant_client.http.models import (
     Condition,
@@ -21,16 +20,18 @@ from qdrant_client.http.models import (
 
 from backend.rag.indexer import get_vectorstore
 from backend.rag.registry import get_indexed_doc_ids
+from backend.rag.types import ReportChunk
 
-# module-level singleton — None until first retrieval request
+# module-level singleton — initialized once on first retrieval request
+# model already baked into Docker image — loads from disk, no download
 _reranker: TextCrossEncoder | None = None
 
 
 def get_reranker() -> TextCrossEncoder:
     """
     Lazy-initialize the cross-encoder reranker.
-    Downloads ~22MB ONNX model on first use, cached locally after.
-    No PyTorch dependency — fastembed uses ONNX runtime.
+    Model is baked into the Docker image — loads from disk into RAM.
+    No download at runtime.
     """
     global _reranker
     if _reranker is None:
@@ -67,7 +68,7 @@ def retrieve_from_reports(
     company: str,
     top_k_retrieve: int = 20,
     top_k_final: int = 5,
-) -> list[Document]:
+) -> list[ReportChunk]:
     """
     Retrieve relevant chunks from indexed financial reports.
 
@@ -83,7 +84,7 @@ def retrieve_from_reports(
         top_k_final:    Final chunks to return after reranking (narrow)
 
     Returns:
-        List of Documents ordered by reranker score, highest first.
+        List of ReportChunks ordered by reranker score, highest first.
         Empty list if no indexed documents exist.
 
     Raises:
@@ -95,15 +96,11 @@ def retrieve_from_reports(
         )
 
     # ── Stage 1: Registry safety gate ───────────────────────────────
-    # only query doc_ids that are fully indexed
-    # prevents returning partial results from in-progress or failed indexing
     safe_doc_ids = get_indexed_doc_ids()
     if not safe_doc_ids:
         return []
 
     # ── Stage 2: Hybrid search ───────────────────────────────────────
-    # Qdrant runs dense + BM25 simultaneously, fuses via RRF internally
-    # filter scopes to safe doc_ids AND specific company
     vectorstore = get_vectorstore()
     qdrant_filter = _build_filter(safe_doc_ids, company)
 
@@ -117,45 +114,46 @@ def retrieve_from_reports(
         return []
 
     # ── Stage 3: Cross-encoder reranking ────────────────────────────
-    # reranker reads query + chunk TOGETHER — more precise than embedding similarity
-    # scores each (query, chunk_text) pair jointly
-    # promotes chunks that directly answer the query over tangentially related ones
     reranker = get_reranker()
     chunk_texts = [doc.page_content for doc in candidates]
     scores = list(reranker.rerank(query, chunk_texts))
 
-    # zip scores with Documents, sort descending, return top_k_final
     scored = sorted(
         zip(scores, candidates),
         key=lambda x: x[0],
         reverse=True,
     )
-    return [doc for _, doc in scored[:top_k_final]]
+
+    # ── Stage 4: Convert to typed ReportChunk ───────────────────────
+    # type: ignore here is intentional — LangChain types metadata as dict[str, Any]
+    # we know the shape because we wrote it in indexer.py
+    # single conversion point — all downstream code uses typed ReportChunk
+    return [
+        ReportChunk(
+            content=doc.page_content,
+            doc_id=doc.metadata["doc_id"],
+            company=doc.metadata["company"],
+            report_type=doc.metadata["report_type"],
+            fiscal_year=doc.metadata["fiscal_year"],
+            page=doc.metadata["page"],
+            source=doc.metadata["source"],
+        )
+        for _, doc in scored[:top_k_final]
+    ]
 
 
-def format_chunks_for_llm(chunks: list[Document]) -> str:
+def format_chunks_for_llm(chunks: list[ReportChunk]) -> str:
     """
     Format retrieved chunks as a context string with citations.
-
-    Each chunk is prefixed with a citation identifying the source document,
-    report type, fiscal year, and page number. The LLM uses these citations
-    when attributing specific figures or claims in its response.
-
-    Returns a not-found message if chunks is empty — the LLM should
-    acknowledge this rather than hallucinating an answer.
+    Each chunk is prefixed with a citation identifying source, type, year, page.
+    Returns a not-found message if chunks is empty.
     """
     if not chunks:
         return "No relevant information found in uploaded financial reports."
 
     sections = []
-    for doc in chunks:
-        meta = doc.metadata
-        citation = (
-            f"[{meta.get('company', 'Unknown')} "
-            f"{meta.get('report_type', 'Report')} "
-            f"{meta.get('fiscal_year', '')}, "
-            f"page {meta.get('page', '?')}]"
-        )
-        sections.append(f"{citation}\n{doc.page_content}")
+    for chunk in chunks:
+        citation = f"[{chunk.company} {chunk.report_type} {chunk.fiscal_year}, page {chunk.page}]"
+        sections.append(f"{citation}\n{chunk.content}")
 
     return "\n\n".join(sections)
