@@ -8,7 +8,6 @@ from backend.schemas.stock import StockAnalysis, StockAnalysisLLMOutput
 
 MODEL_NAME = "gpt-4o-mini"
 
-# module-level singletons — initialized on first use, not at import time
 _model = None
 _agent = None
 
@@ -41,7 +40,8 @@ def run_research(ticker: str) -> StockAnalysis:
                             content=f"Help me do a comprehensive research on the ticker {ticker}"
                         )
                     ]
-                }
+                },
+                config={"recursion_limit": 15},
             )
             llm_output = result["structured_response"]
             return StockAnalysis(**llm_output.model_dump())

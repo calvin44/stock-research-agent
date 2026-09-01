@@ -1,5 +1,6 @@
 # backend/agent/tools/__init__.py
 
+from backend.agent.tools.reports import search_financial_reports
 from backend.agent.tools.tavily import (
     search_competitive_landscape,
     search_earnings_guidance,
@@ -14,4 +15,5 @@ ALL_TOOLS = [
     search_stock_news,
     search_competitive_landscape,
     search_earnings_guidance,
+    search_financial_reports,
 ]
