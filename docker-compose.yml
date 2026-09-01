@@ -5,11 +5,14 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stock_research
       - QDRANT_URL=http://qdrant:6333
+      - UV_PROJECT_ENVIRONMENT=.venv
+      - FASTEMBED_CACHE_PATH=/app/.cache/fastembed
     ports:
       - "8000:8000"
     volumes:
       - .:/app
       - venv_cache:/app/.venv
+      - fastembed_cache:/app/.cache/fastembed
     depends_on:
       - qdrant
       - postgres
@@ -36,3 +39,4 @@ volumes:
   qdrant_data:
   postgres_data:
   venv_cache:
+  fastembed_cache:

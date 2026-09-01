@@ -20,3 +20,4 @@ postgres_data/
 **/.DS_Store
 test_files/
 .venv-local/
+.cache/
