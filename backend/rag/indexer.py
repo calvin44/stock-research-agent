@@ -12,6 +12,7 @@ Flow:
 import hashlib
 import os
 import tempfile
+from functools import lru_cache
 
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
@@ -36,49 +37,27 @@ COLLECTION_NAME = "financial_reports"
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 100
 
-# module-level singletons — initialized once, reused across calls
-_qdrant_client: QdrantClient | None = None
-_vectorstore: QdrantVectorStore | None = None
 
-
-def _get_qdrant_url() -> str:
-    """Read QDRANT_URL from environment. Raises clearly if not set."""
-    url = settings.qdrant_url
-    if not url:
-        raise RuntimeError("QDRANT_URL environment variable is not set. Add it to your .env file.")
-    return url
-
-
+@lru_cache(maxsize=1)
 def get_vectorstore() -> QdrantVectorStore:
     """
-    Lazy-initialize Qdrant client and vectorstore.
-    Creates the financial_reports collection if it doesn't exist.
-    Called on first use — safe to call repeatedly.
+    Initialize Qdrant client and vectorstore — runs once, cached forever.
+    Creates financial_reports collection if it doesn't exist.
     """
-    global _qdrant_client, _vectorstore
+    client = QdrantClient(url=settings.qdrant_url)
 
-    if _vectorstore is not None:
-        return _vectorstore
-
-    _qdrant_client = QdrantClient(url=_get_qdrant_url())
-
-    # create collection if it doesn't exist
-    existing = [c.name for c in _qdrant_client.get_collections().collections]
+    existing = [c.name for c in client.get_collections().collections]
     if COLLECTION_NAME not in existing:
-        _qdrant_client.create_collection(
+        client.create_collection(
             collection_name=COLLECTION_NAME,
-            vectors_config={
-                # dense vector — 1536 dims matches text-embedding-3-small
-                "dense": VectorParams(size=1536, distance=Distance.COSINE)
-            },
+            vectors_config={"dense": VectorParams(size=1536, distance=Distance.COSINE)},
             sparse_vectors_config={
-                # sparse vector — BM25 keyword index
                 "sparse": SparseVectorParams(index=SparseIndexParams(on_disk=False))
             },
         )
 
-    _vectorstore = QdrantVectorStore(
-        client=_qdrant_client,
+    return QdrantVectorStore(
+        client=client,
         collection_name=COLLECTION_NAME,
         embedding=OpenAIEmbeddings(model="text-embedding-3-small"),
         sparse_embedding=FastEmbedSparse(model_name="Qdrant/bm25"),
@@ -86,8 +65,6 @@ def get_vectorstore() -> QdrantVectorStore:
         vector_name="dense",
         sparse_vector_name="sparse",
     )
-
-    return _vectorstore
 
 
 async def index_document(

@@ -1,13 +1,14 @@
-from backend.config import settings  # noqa: F401, I001
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from backend.agent.chat import get_checkpointer
 from backend.api.report_routes import router as reports_router
 from backend.api.routes import router
+from backend.config import settings  # noqa: F401, I001
 from backend.rag.indexer import get_vectorstore
 from backend.rag.registry import setup_table
-from backend.rag.retrieval import get_reranker
+from backend.rag.retriever import get_reranker
 
 
 @asynccontextmanager
@@ -21,6 +22,7 @@ async def lifespan(_: FastAPI):
     setup_table()
     get_vectorstore()
     get_reranker()
+    get_checkpointer()
     yield
 
 

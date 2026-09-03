@@ -7,7 +7,7 @@ The agent calls this when the user asks about data from uploaded reports.
 from langchain_core.tools import tool
 
 from backend.rag.registry import IndexStatus, get_all_records
-from backend.rag.retrieval import format_chunks_for_llm, retrieve_from_reports
+from backend.rag.retriever import format_chunks_for_llm, retrieve_from_reports
 
 
 @tool

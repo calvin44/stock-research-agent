@@ -8,6 +8,8 @@ Flow:
   4. Format chunks with citations for LLM context
 """
 
+from functools import lru_cache
+
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 from langsmith import traceable
 from qdrant_client.http.models import (
@@ -22,21 +24,14 @@ from backend.rag.indexer import get_vectorstore
 from backend.rag.registry import get_indexed_doc_ids
 from backend.rag.types import ReportChunk
 
-# module-level singleton — initialized once on first retrieval request
-# model already baked into Docker image — loads from disk, no download
-_reranker: TextCrossEncoder | None = None
 
-
+@lru_cache(maxsize=1)
 def get_reranker() -> TextCrossEncoder:
     """
-    Lazy-initialize the cross-encoder reranker.
-    Model is baked into the Docker image — loads from disk into RAM.
-    No download at runtime.
+    Load cross-encoder reranker model — runs once, cached forever.
+    Model is downloaded to fastembed cache on first call.
     """
-    global _reranker
-    if _reranker is None:
-        _reranker = TextCrossEncoder(model_name="Xenova/ms-marco-MiniLM-L-6-v2")
-    return _reranker
+    return TextCrossEncoder(model_name="Xenova/ms-marco-MiniLM-L-6-v2")
 
 
 def _build_filter(
