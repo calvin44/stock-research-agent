@@ -33,7 +33,8 @@ from qdrant_client.http.models import (
 from backend.config import settings
 from backend.rag.registry import IndexStatus, create_record, get_record_by_hash, update_status
 
-COLLECTION_NAME = "financial_reports"
+COLLECTION_NAME = os.getenv("QDRANT_TEST_COLLECTION", "financial_reports")
+
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 100
 

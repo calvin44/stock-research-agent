@@ -21,3 +21,4 @@ postgres_data/
 test_files/
 .venv-local/
 .cache/
+temp.txt

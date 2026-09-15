@@ -26,6 +26,7 @@ def get_checkpointer() -> PostgresSaver:
     if _checkpointer is None:
         _pool = ConnectionPool(
             conninfo=settings.database_url,
+            open=True,
             max_size=5,
             kwargs={
                 "autocommit": True,
