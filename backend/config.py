@@ -12,11 +12,13 @@ class Settings(BaseSettings):
     langchain_tracing_v2: bool = False
     langchain_api_key: str = ""
     langchain_project: str = "stock-research-agent"
+    deepeval_per_task_timeout_seconds_override: int = 300
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()  # type: ignore[call-arg]
+
 
 # explicitly populate os.environ so libraries that read from it directly
 # (OpenAI, LangChain, Tavily) can find the keys
@@ -24,6 +26,9 @@ os.environ["OPENAI_API_KEY"] = settings.openai_api_key
 os.environ["TAVILY_API_KEY"] = settings.tavily_api_key
 os.environ["QDRANT_URL"] = settings.qdrant_url
 os.environ["DATABASE_URL"] = settings.database_url
+os.environ["DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE"] = str(
+    settings.deepeval_per_task_timeout_seconds_override
+)
 if settings.langchain_api_key:
     os.environ["LANGCHAIN_API_KEY"] = settings.langchain_api_key
     os.environ["LANGCHAIN_TRACING_V2"] = str(settings.langchain_tracing_v2).lower()

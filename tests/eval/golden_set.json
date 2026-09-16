@@ -1,0 +1,102 @@
+[
+  {
+    "question": "Berapa pendapatan bersih konsolidasian UNTR pada Q1 2026?",
+    "ground_truth": "Pendapatan bersih konsolidasian Perseroan mencapai Rp28.554 miliar pada Q1 2026.",
+    "source_page": 0
+  },
+  {
+    "question": "Berapa perubahan pendapatan bersih UNTR dibandingkan Q1 2025?",
+    "ground_truth": "Pendapatan bersih turun 17% dibandingkan Q1 2025 yang sebesar Rp34.261 miliar.",
+    "source_page": 0
+  },
+  {
+    "question": "Berapa laba bersih UNTR pada Q1 2026?",
+    "ground_truth": "Laba bersih sebesar Rp643 miliar pada Q1 2026, turun 80% dibandingkan Q1 2025 yang sebesar Rp3.187 miliar.",
+    "source_page": 0
+  },
+  {
+    "question": "Berapa laba bersih per saham UNTR pada Q1 2026?",
+    "ground_truth": "Laba bersih per saham sebesar Rp181 pada Q1 2026, turun 79% dibandingkan Q1 2025 yang sebesar Rp878.",
+    "source_page": 0
+  },
+  {
+    "question": "Berapa laba bersih UNTR tidak termasuk non-recurring charges pada Q1 2026?",
+    "ground_truth": "Laba bersih tidak termasuk non-recurring charges sebesar Rp1.793 miliar, turun 44% dibandingkan Q1 2025 yang sebesar Rp3.198 miliar.",
+    "source_page": 0
+  },
+  {
+    "question": "Berapa nilai non-recurring charges UNTR pada Q1 2026?",
+    "ground_truth": "Non-recurring charges sebesar Rp1.151 miliar pada Q1 2026.",
+    "source_page": 0
+  },
+  {
+    "question": "Berapa utang bersih UNTR per 31 Maret 2026?",
+    "ground_truth": "UNTR mencatat utang bersih sebesar Rp5,5 triliun per 31 Maret 2026, dengan net gearing ratio sebesar 5%.",
+    "source_page": 1
+  },
+  {
+    "question": "Berapa posisi kas bersih UNTR per 31 Desember 2025?",
+    "ground_truth": "Posisi kas bersih UNTR sebesar Rp7,7 triliun per 31 Desember 2025.",
+    "source_page": 1
+  },
+  {
+    "question": "Bagaimana kinerja penjualan alat berat Komatsu pada Q1 2026?",
+    "ground_truth": "Penjualan alat berat Komatsu turun 20% menjadi 1.107 unit pada Q1 2026, disebabkan oleh penurunan penjualan pada sektor pertambangan.",
+    "source_page": 1
+  },
+  {
+    "question": "Berapa pangsa pasar Komatsu pada Q1 2026?",
+    "ground_truth": "Pangsa pasar Komatsu sebesar 18% berdasarkan riset pasar internal.",
+    "source_page": 1
+  },
+  {
+    "question": "Berapa pendapatan bersih segmen Mesin Konstruksi pada Q1 2026?",
+    "ground_truth": "Pendapatan bersih dari Mesin Konstruksi turun 31% menjadi Rp7,5 triliun pada Q1 2026.",
+    "source_page": 1
+  },
+  {
+    "question": "Berapa volume pemindahan tanah PAMA Grup pada Q1 2026?",
+    "ground_truth": "PAMA Grup mencatatkan volume pemindahan tanah sebesar 236 juta bcm pada Q1 2026, turun 7% dibandingkan periode yang sama tahun lalu.",
+    "source_page": 2
+  },
+  {
+    "question": "Berapa volume produksi batu bara klien PAMA pada Q1 2026?",
+    "ground_truth": "Volume produksi batu bara untuk para klien PAMA turun 4% menjadi 31 juta ton dengan rata-rata stripping ratio sebesar 7,6x.",
+    "source_page": 2
+  },
+  {
+    "question": "Berapa pendapatan bersih segmen Kontraktor Penambangan pada Q1 2026?",
+    "ground_truth": "Pendapatan bersih dari Kontraktor Penambangan turun 6% menjadi Rp11,9 triliun pada Q1 2026.",
+    "source_page": 2
+  },
+  {
+    "question": "Berapa pendapatan segmen Pertambangan Batu Bara Termal dan Metalurgi pada Q1 2026?",
+    "ground_truth": "Pendapatan segmen Pertambangan Batu Bara Termal dan Metalurgi meningkat 13% menjadi Rp8,0 triliun pada Q1 2026, terutama karena harga rata-rata batu bara yang lebih tinggi.",
+    "source_page": 3
+  },
+  {
+    "question": "Berapa total volume penjualan batu bara TTA termasuk pihak ketiga pada Q1 2026?",
+    "ground_truth": "Total volume penjualan batu bara TTA termasuk batu bara pihak ketiga mencapai 4,6 juta ton pada Q1 2026, 20% lebih tinggi dibandingkan periode yang sama tahun lalu.",
+    "source_page": 3
+  },
+  {
+    "question": "Berapa pendapatan bersih dari segmen emas dan mineral lainnya pada Q1 2026?",
+    "ground_truth": "Pendapatan bersih dari bisnis emas dan mineral lainnya turun 76% menjadi Rp692 miliar pada Q1 2026, terutama disebabkan oleh tidak adanya penjualan emas dari tambang emas Martabe.",
+    "source_page": 3
+  },
+  {
+    "question": "Berapa total penjualan setara emas PT Agincourt Resources dan PT Sumbawa Jutaraya pada Q1 2026?",
+    "ground_truth": "Total penjualan setara emas sebesar 4 ribu ons pada Q1 2026, turun 93% dibandingkan periode yang sama tahun 2025.",
+    "source_page": 3
+  },
+  {
+    "question": "Berapa penjualan bijih nikel PT Stargate Pasific Resources pada Q1 2026?",
+    "ground_truth": "PT Stargate Pasific Resources mencatatkan penjualan bijih nikel sebesar 597 ribu wet metric ton (wmt) pada Q1 2026, terdiri dari 171 ribu wmt saprolit dan 426 ribu wmt limonit.",
+    "source_page": 4
+  },
+  {
+    "question": "Berapa kepemilikan UNTR di Nickel Industries Limited (NIC)?",
+    "ground_truth": "UNTR memiliki kepemilikan sebesar 20,14% di Nickel Industries Limited (NIC).",
+    "source_page": 4
+  }
+]

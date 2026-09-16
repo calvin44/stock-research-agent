@@ -22,3 +22,7 @@ test_files/
 .venv-local/
 .cache/
 temp.txt
+.deepeval-cache.json
+.latest_run_full.json
+.latest_test_run.json
+tests/eval/ragas_results.json
