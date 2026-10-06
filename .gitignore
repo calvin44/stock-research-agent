@@ -26,3 +26,17 @@ temp.txt
 .latest_run_full.json
 .latest_test_run.json
 tests/eval/ragas_results.json
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+
+# Root level (from npm)
+node_modules/
+package-lock.json
+package.json
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+.next/
