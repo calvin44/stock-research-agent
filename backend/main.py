@@ -10,11 +10,13 @@ from backend.config import settings  # noqa: F401
 from backend.rag.indexer import get_vectorstore
 from backend.rag.registry import setup_table
 from backend.rag.retriever import get_reranker
+from backend.store.research_store import setup_tables as setup_research_tables
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     setup_table()
+    setup_research_tables()
     get_vectorstore()
     get_reranker()
     get_checkpointer()

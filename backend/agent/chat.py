@@ -41,26 +41,22 @@ def get_checkpointer() -> PostgresSaver:
 def continue_chat(
     session_id: str,
     message: str,
+    ticker: str = "",
 ) -> str:
     """
     Continue an existing chat session with a follow-up message.
-    Reads conversation history from Postgres via PostgresSaver.
-    Agent has full context of all previous turns in the session.
-
-    Args:
-        session_id: UUID identifying the conversation thread
-        message:    User's follow-up question
-
-    Returns:
-        Agent's response as plain text with citations if applicable
+    Optionally prepends ticker context to ground the agent.
     """
     config = {
         "configurable": {"thread_id": session_id},
         "recursion_limit": 15,
     }
 
+    # prepend ticker context so agent knows which stock is being discussed
+    contextual_message = f"[Stock being discussed: {ticker}] {message}" if ticker else message
+
     result = _get_agent(checkpointer=get_checkpointer()).invoke(
-        {"messages": [HumanMessage(content=message)]},
+        {"messages": [HumanMessage(content=contextual_message)]},
         config=config,
     )
 

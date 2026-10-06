@@ -25,7 +25,10 @@ export default function Home() {
         onSelectTicker={handleSelectTicker}
         onRemoveTicker={removeTicker}
       />
-      <ReportPanel ticker={selectedTicker} />
+      <ReportPanel
+        ticker={selectedTicker}
+        sessionId={selectedTicker ? getSession(selectedTicker) : null}
+      />
       <ChatPanel
         key={selectedTicker}
         ticker={selectedTicker}

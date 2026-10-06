@@ -1,17 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { WatchlistItem } from '@/app/types'
+import { deleteChatHistory } from '@/app/lib/api'
 
 const STORAGE_KEY = 'alphaview_watchlist'
 
 export function useWatchlist() {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const initialized = useRef(false)
 
   useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) setWatchlist(JSON.parse(stored))
+    const initial = stored ? JSON.parse(stored) : []
+    setWatchlist(initial)
     setHydrated(true)
   }, [])
 
@@ -31,8 +36,11 @@ export function useWatchlist() {
   }
 
   const removeTicker = (ticker: string) => {
+    const item = watchlist.find((w) => w.ticker === ticker)
+    if (item) {
+      deleteChatHistory(item.sessionId)
+    }
     save(watchlist.filter((w) => w.ticker !== ticker))
-    localStorage.removeItem(`analysis_${ticker}`)
   }
 
   const getSession = (ticker: string): string | null => {
