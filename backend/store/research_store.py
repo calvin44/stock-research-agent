@@ -80,6 +80,11 @@ def save_analysis(analysis: StockAnalysis) -> None:
         )
 
 
+def delete_analysis(ticker: str) -> None:
+    with _connect() as conn:
+        conn.execute("DELETE FROM research_analyses WHERE ticker = %s", (ticker,))
+
+
 def claim_seed(
     session_id: str, ticker: str, analysis_updated_at: datetime
 ) -> bool | None:

@@ -173,7 +173,13 @@ export async function fetchChatHistory(
 }
 
 export async function deleteChatHistory(sessionId: string): Promise<void> {
-  await fetch(`${API_URL}/chat/history/${sessionId}`, {
+  const res = await fetch(`${API_URL}/chat/history/${sessionId}`, {
     method: 'DELETE',
-  }).catch(() => {})
+  })
+  if (!res.ok) throw new Error('Failed to delete chat history')
+}
+
+export async function deleteResearch(ticker: string): Promise<void> {
+  const res = await fetch(`${API_URL}/research/${ticker}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`Failed to delete analysis for ${ticker}`)
 }

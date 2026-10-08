@@ -5,6 +5,16 @@ import { WatchlistItem } from '@/app/types'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface SidebarProps {
   watchlist: WatchlistItem[]
@@ -12,7 +22,7 @@ interface SidebarProps {
   selectedTicker: string | null
   onAddTicker: (ticker: string) => void
   onSelectTicker: (ticker: string) => void
-  onRemoveTicker: (ticker: string) => void
+  onRemoveTicker: (ticker: string) => Promise<void>
 }
 
 export default function Sidebar({
@@ -24,7 +34,26 @@ export default function Sidebar({
   onRemoveTicker,
 }: SidebarProps) {
   const [query, setQuery] = useState('')
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const confirmDelete = async (e: React.MouseEvent) => {
+    if (!pendingDelete) return
+    // keep the dialog open until the server finishes
+    e.preventDefault()
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await onRemoveTicker(pendingDelete)
+      setPendingDelete(null)
+    } catch {
+      setDeleteError(`Could not delete ${pendingDelete}. Try again.`)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && query.trim()) {
@@ -111,7 +140,8 @@ export default function Sidebar({
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  onRemoveTicker(item.ticker)
+                  setDeleteError('')
+                  setPendingDelete(item.ticker)
                 }}
                 className="opacity-0 group-hover:opacity-100 text-[#555] hover:text-[#888] text-xs transition-opacity"
               >
@@ -121,6 +151,42 @@ export default function Sidebar({
           ))
         )}
       </div>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null)
+        }}
+      >
+        <AlertDialogContent className="bg-[#0d0d0d] border-[#2a2a2a] text-[#e8e8e8]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {pendingDelete}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#888]">
+              This deletes the chat history and saved analysis for{' '}
+              {pendingDelete}. Adding it back will require running Analyze
+              again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="text-xs text-[#F09595]">{deleteError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleting}
+              className="bg-transparent border-[#2a2a2a] text-[#888] hover:bg-[#1e1e1e] hover:text-[#e8e8e8]"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="bg-[#a32d2d] hover:bg-[#c03a3a] text-white"
+            >
+              {deleting ? 'Removing…' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Upload button */}
       <div className="px-3 py-3 border-t border-[#1e1e1e]">

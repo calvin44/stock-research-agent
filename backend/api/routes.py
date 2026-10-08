@@ -11,6 +11,7 @@ from backend.agent.chat import continue_chat
 from backend.schemas.stock import StockAnalysis
 from backend.store.research_store import (
     claim_seed,
+    delete_analysis,
     get_analysis,
     get_analysis_updated_at,
     release_seed,
@@ -161,24 +162,34 @@ def get_chat_history(session_id: str):
         return []
 
 
+@router.delete("/research/{ticker}")
+def delete_research(ticker: str):
+    """Delete the stored analysis for a ticker. Idempotent."""
+    try:
+        delete_analysis(ticker)
+    except Exception as e:
+        print(f"Delete analysis error for {ticker}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete analysis") from e
+    return {"status": "deleted"}
+
+
 @router.delete("/chat/history/{session_id}")
 def delete_chat_history(session_id: str):
-    """Delete checkpoint history for a session from Postgres."""
+    """Delete checkpoint history and seed record for a session. Idempotent."""
     try:
         import psycopg
 
         from backend.config import settings
 
-        conn = psycopg.connect(settings.database_url)
-        conn.autocommit = True
-        conn.execute("DELETE FROM checkpoints WHERE thread_id = %s", (session_id,))
-        conn.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (session_id,))
-        conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (session_id,))
-        conn.execute("DELETE FROM chat_session_seeds WHERE session_id = %s", (session_id,))
-        conn.close()
-        return {"status": "deleted"}
-    except Exception:
-        return {"status": "error"}
+        with psycopg.connect(settings.database_url, autocommit=True) as conn:
+            conn.execute("DELETE FROM checkpoints WHERE thread_id = %s", (session_id,))
+            conn.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (session_id,))
+            conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (session_id,))
+            conn.execute("DELETE FROM chat_session_seeds WHERE session_id = %s", (session_id,))
+    except Exception as e:
+        print(f"Delete chat error for session {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete chat history") from e
+    return {"status": "deleted"}
 
 
 @router.get("/price-history/{ticker}")

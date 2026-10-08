@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { WatchlistItem } from '@/app/types'
-import { deleteChatHistory } from '@/app/lib/api'
+import { deleteChatHistory, deleteResearch } from '@/app/lib/api'
 
 const STORAGE_KEY = 'alphaview_watchlist'
 
@@ -35,10 +35,14 @@ export function useWatchlist() {
     save([...watchlist, item])
   }
 
-  const removeTicker = (ticker: string) => {
+  // deletes server-side chat and analysis first; throws and keeps the entry if either fails
+  const removeTicker = async (ticker: string) => {
     const item = watchlist.find((w) => w.ticker === ticker)
     if (item) {
-      deleteChatHistory(item.sessionId)
+      await Promise.all([
+        deleteChatHistory(item.sessionId),
+        deleteResearch(ticker),
+      ])
     }
     save(watchlist.filter((w) => w.ticker !== ticker))
   }

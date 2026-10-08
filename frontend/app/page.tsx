@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useWatchlist } from '@/app/hooks/useWatchlist'
 import Sidebar from '@/app/components/sidebar/Sidebar'
 import ReportPanel from '@/app/components/report/ReportPanel'
@@ -10,9 +11,17 @@ export default function Home() {
   const { watchlist, hydrated, addTicker, removeTicker, getSession } =
     useWatchlist()
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const handleSelectTicker = (ticker: string) => {
     setSelectedTicker(ticker)
+  }
+
+  const handleRemoveTicker = async (ticker: string) => {
+    await removeTicker(ticker)
+    queryClient.removeQueries({ queryKey: ['research', ticker] })
+    queryClient.removeQueries({ queryKey: ['price-history', ticker] })
+    if (selectedTicker === ticker) setSelectedTicker(null)
   }
 
   return (
@@ -23,7 +32,7 @@ export default function Home() {
         selectedTicker={selectedTicker}
         onAddTicker={addTicker}
         onSelectTicker={handleSelectTicker}
-        onRemoveTicker={removeTicker}
+        onRemoveTicker={handleRemoveTicker}
       />
       <ReportPanel
         ticker={selectedTicker}
